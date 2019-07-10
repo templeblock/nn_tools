@@ -8,6 +8,7 @@ from Caffe import layer_param
 from torch.nn.modules.utils import _pair
 import numpy as np
 import inspect
+import math
 
 """
 How to support a new layer type:
@@ -159,33 +160,42 @@ def _conv_transpose2d(raw,input, weight, bias=None, stride=1, padding=0, output_
     log.cnet.add_layer(layer)
     return x
 
-def _interpolate(raw,input, size=None, scale_factor=None, mode='nearest', align_corners=None):
-    raise NotImplementedError("The interpolate upsampling in pytorch cannot be implimented in caffe by This function, I'll try later. ")
 
-    if mode=='bilinear':
-        x=raw(input, size, scale_factor, mode, align_corners)
+def FillBilinear(ch, k):
+    blob = np.zeros(shape=(ch, 1, k, k))
+
+    """ Create bilinear weights in numpy array """
+    bilinear_kernel = np.zeros([k, k], dtype=np.float32)
+    scale_factor = (k + 1) // 2
+    if k % 2 == 1:
+        center = scale_factor - 1
+    else:
+        center = scale_factor - 0.5
+    for x in range(k):
+        for y in range(k):
+            bilinear_kernel[x, y] = (1 - abs(x - center) / scale_factor) * (1 - abs(y - center) / scale_factor)
+
+    for i in range(ch):
+        blob[i, 0, :, :] = bilinear_kernel
+    return blob
+
+
+# upsample layer
+def _interpolate(raw, input, size=None, scale_factor=None, mode='nearest', align_corners=None):
+    if mode == 'bilinear':
+        x = raw(input, size, scale_factor, mode, align_corners)
     else:
         raise NotImplementedError("The interpolate upsampling only support bilinear in Caffe")
-    name=log.add_layer(name='interpolate')
-    log.add_blobs([x],name='interpolate_blob')
-    layer=caffe_net.Layer_param(name=name, type='Deconvolution',
-                                bottom=[log.get_blobs(input)], top=[log.get_blobs(x)])
+    name = log.add_layer(name='interpolate')
+    log.add_blobs([x], name='interpolate_blob')
+    layer = caffe_net.Layer_param(name=name, type='Deconvolution',
+                                  bottom=[log.blobs(input)], top=[log.blobs(x)])
 
-    def bilinear_weight(shape):
-        weight = np.zeros(np.prod(shape), dtype='float32')
-        f = np.ceil(shape[3] / 2.)
-        c = (2 * f - 1 - f % 2) / (2. * f)
-        for i in range(np.prod(shape)):
-            x = i % shape[3]
-            y = (i / shape[3]) % shape[2]
-            weight[i] = (1 - abs(x / f - c)) * (1 - abs(y / f - c))
-        return weight.reshape(shape)
-    kernel_size=2*scale_factor-scale_factor%2
-    stride=scale_factor
-    pad=int(np.ceil((scale_factor-1)/2))
-    channels=x.size(1)
-    weight=bilinear_weight([channels,1,kernel_size,kernel_size])
-    layer.conv_param(channels,kernel_size,stride=stride,pad=pad,bias_term=False,groups=channels)
+    kernel_size = 2 * scale_factor - scale_factor % 2
+    pad = int(math.ceil((scale_factor - 1) / 2.))
+    channels = x.size(1)
+    weight = FillBilinear(channels, kernel_size)
+    layer.conv_param(channels, kernel_size, stride=scale_factor, pad=pad, bias_term=False, groups=channels)
     layer.add_data(weight)
     log.cnet.add_layer(layer)
     return x
