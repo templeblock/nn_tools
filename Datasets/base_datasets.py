@@ -1,12 +1,13 @@
 import numpy as np
 
+
 class BaseDataset():
     # the father of all datasets class, there are some interface was defined
     def __init__(self):
         # the data saved in the class was a list with the format [data,label,...]
-        self.data={}
+        self.data = {}
         self.init_data()
-        self.p={'train':0,'test':0,'val':0}
+        self.p = {'train': 0, 'test': 0, 'val': 0}
 
     def init_data(self):
         pass
@@ -34,4 +35,4 @@ class BaseDataset():
             self.p[name] = 0
             self.data[name] = self._shuffle(self.data[name])
         self.p[name] += batch_size
-        return [i[p:p+batch_size] for i in self.data[name]]
+        return [i[p:p + batch_size] for i in self.data[name]]

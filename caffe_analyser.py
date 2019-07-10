@@ -17,13 +17,15 @@ Command：`python caffe_analyser.py [-h] prototxt outdir shape`
 For example `python caffe_analyser.py resnet_18_deploy.prototxt analys_result.csv 1,3,224,224`
 """
 
-if __name__=="__main__":
-    parser=argparse.ArgumentParser()
-    parser.add_argument('prototxt',help='path of the prototxt file',type=str)
-    parser.add_argument('outdir',help='path to save the csv file',type=str)
-    parser.add_argument('shape',help='input shape of the network(split by comma `,`), image shape should be: batch,c,h,w',type=str)
-    args=parser.parse_args()
-    shape=[int(i) for i in args.shape.split(',')]
-    net=caffe_net.Prototxt(args.prototxt)
-    blob_dict, layers=profiling(net, Blob(shape))
-    save_csv(layers,args.outdir)
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('prototxt', help='path of the prototxt file', type=str)
+    parser.add_argument('outdir', help='path to save the csv file', type=str)
+    parser.add_argument('shape',
+                        help='input shape of the network(split by comma `,`), image shape should be: batch,c,h,w',
+                        type=str)
+    args = parser.parse_args()
+    shape = [int(i) for i in args.shape.split(',')]
+    net = caffe_net.Prototxt(args.prototxt)
+    blob_dict, layers = profiling(net, Blob(shape))
+    save_csv(layers, args.outdir)

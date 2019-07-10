@@ -6,6 +6,7 @@ import numpy as np
 import types
 from numpy import random
 
+
 def intersect(box_a, box_b):
     max_xy = np.minimum(box_a[:, 2:], box_b[2:])
     min_xy = np.maximum(box_a[:, :2], box_b[:2])
@@ -25,13 +26,13 @@ def jaccard_numpy(box_a, box_b):
     Return:
         jaccard overlap: Shape: [box_a.shape[0], box_a.shape[1]]
     """
-    if box_a.ndim==1:
-        box_a=box_a.reshape([1,-1])
+    if box_a.ndim == 1:
+        box_a = box_a.reshape([1, -1])
     inter = intersect(box_a, box_b)
-    area_a = ((box_a[:, 2]-box_a[:, 0]) *
-              (box_a[:, 3]-box_a[:, 1]))  # [A,B]
-    area_b = ((box_b[2]-box_b[0]) *
-              (box_b[3]-box_b[1]))  # [A,B]
+    area_a = ((box_a[:, 2] - box_a[:, 0]) *
+              (box_a[:, 3] - box_a[:, 1]))  # [A,B]
+    area_b = ((box_b[2] - box_b[0]) *
+              (box_b[3] - box_b[1]))  # [A,B]
     union = area_a + area_b - inter
     return inter / union  # [A,B]
 
@@ -66,9 +67,10 @@ class SSD_Lambda(object):
     def __call__(self, img, boxes=None, labels=None):
         return self.lambd(img, boxes, labels)
 
+
 class ConvertFromInts(object):
     def __call__(self, image, *args):
-        image=image.astype(np.float32)
+        image = image.astype(np.float32)
         if len(args):
             return (image, *args)
         else:
@@ -82,7 +84,7 @@ class SubtractMeans(object):
     def __call__(self, image, *args):
         image = image.astype(np.float32)
         image -= self.mean
-        image=image.astype(np.float32)
+        image = image.astype(np.float32)
         if len(args):
             return (image,)
         else:
@@ -119,6 +121,7 @@ class BGR_2_HSV(object):
         else:
             return HSV_img
 
+
 class HSV_2_BGR(object):
     def __call__(self, image, *args):
         BGR_img = cv2.cvtColor(image, cv2.COLOR_HSV2BGR)
@@ -127,13 +130,14 @@ class HSV_2_BGR(object):
         else:
             return BGR_img
 
+
 class Resize(object):
     def __init__(self, size=300):
         self.size = size
 
     def __call__(self, image, *args):
         image = cv2.resize(image, (self.size,
-                                 self.size))
+                                   self.size))
         if len(args):
             return (image,)
         else:
@@ -149,11 +153,12 @@ class RandomSaturation(object):
 
     def __call__(self, image, *args):
         if random.randint(2):
-            image[:, :, 1] = (image[:,:,1]*random.uniform(self.lower, self.upper)).astype(np.uint8)
+            image[:, :, 1] = (image[:, :, 1] * random.uniform(self.lower, self.upper)).astype(np.uint8)
         if len(args):
             return (image, *args)
         else:
             return image
+
 
 class RandomHue(object):
     def __init__(self, delta=15.0):
@@ -170,14 +175,15 @@ class RandomHue(object):
         else:
             return image
 
+
 class RandomChannel(object):
     def __init__(self, delta=15.0):
         assert delta >= 0.0 and delta <= 255
         self.delta = delta
 
     def __call__(self, image, *args):
-        channels=image.shape[-1]
-        random_switch=np.random.randint(0,2,channels)
+        channels = image.shape[-1]
+        random_switch = np.random.randint(0, 2, channels)
         for i in range(channels):
             if random_switch[i]:
                 image[:, :, i] += np.uint8(random.uniform(-self.delta, self.delta))
@@ -188,11 +194,13 @@ class RandomChannel(object):
         else:
             return image
 
+
 class RandomValue(object):
     def __init__(self, delta=15.0):
         # random add or sub a random value in hsv mode
-        assert delta>=0.0 and delta<=255.0
+        assert delta >= 0.0 and delta <= 255.0
         self.delta = int(delta)
+
     def __call__(self, image, *args):
         if random.randint(2):
             image[:, :, 2] += np.uint8(random.randint(-self.delta, self.delta))
@@ -202,6 +210,7 @@ class RandomValue(object):
             return (image, *args)
         else:
             return image
+
 
 class RandomLightingNoise(object):
     def __init__(self):
@@ -246,13 +255,13 @@ class RandomContrast(object):
         assert self.lower >= 0, "contrast lower must be non-negative."
 
     # expects float image
-    def __call__(self, image,*args):
+    def __call__(self, image, *args):
         if random.randint(2):
             alpha = random.uniform(self.lower, self.upper)
             image *= alpha
-            image=image.astype(np.uint8)
+            image = image.astype(np.uint8)
         if len(args):
-            return (image, )
+            return (image,)
         else:
             return image
 
@@ -272,21 +281,24 @@ class RandomBrightness(object):
         else:
             return image
 
+
 class RandomNoise(object):
-    def __init__(self,max_noise=3):
-        self.max_noise=max_noise
-    def __call__(self,image,*args):
+    def __init__(self, max_noise=3):
+        self.max_noise = max_noise
+
+    def __call__(self, image, *args):
         if np.random.randint(2):
-            noise=np.random.randint(-self.max_noise,self.max_noise,image.shape)
-            image=np.uint8(noise+image)
+            noise = np.random.randint(-self.max_noise, self.max_noise, image.shape)
+            image = np.uint8(noise + image)
         if len(args):
-            return (image,*args)
+            return (image, *args)
         else:
             return image
 
+
 class ToTensor(object):
     def __call__(self, cvimage, *args):
-        image=torch.from_numpy(cvimage.astype(np.float32)).permute(2, 0, 1)
+        image = torch.from_numpy(cvimage.astype(np.float32)).permute(2, 0, 1)
         if len(args):
             return (image, *args)
         else:
@@ -306,7 +318,8 @@ class SSD_RandomSampleCrop(object):
             boxes (Tensor): the adjusted bounding boxes in pt form
             labels (Tensor): the class labels for each bbox
     """
-    def __init__(self,sample_options=None):
+
+    def __init__(self, sample_options=None):
         if sample_options is None:
             self.sample_options = (
                 # using entire original input image
@@ -320,7 +333,7 @@ class SSD_RandomSampleCrop(object):
                 (None, None),
             )
         else:
-            self.sample_options=sample_options
+            self.sample_options = sample_options
 
     def __call__(self, image, boxes=None, labels=None):
         height, width, _ = image.shape
@@ -351,7 +364,7 @@ class SSD_RandomSampleCrop(object):
                 top = random.uniform(height - h)
 
                 # convert to integer rect x1,y1,x2,y2
-                rect = np.array([int(left), int(top), int(left+w), int(top+h)])
+                rect = np.array([int(left), int(top), int(left + w), int(top + h)])
 
                 # calculate IoU (jaccard overlap) b/t the cropped and gt boxes
                 overlap = jaccard_numpy(boxes, rect)
@@ -362,7 +375,7 @@ class SSD_RandomSampleCrop(object):
 
                 # cut the crop from the image
                 current_image = current_image[rect[1]:rect[3], rect[0]:rect[2],
-                                              :]
+                                :]
 
                 # keep overlap with gt box IF center in sampled patch
                 centers = (boxes[:, :2] + boxes[:, 2:]) / 2.0
@@ -399,19 +412,20 @@ class SSD_RandomSampleCrop(object):
 
                 return current_image, current_boxes, current_labels
 
+
 class Padding(object):
-    def __init__(self, size=1,type='constant',constant_color=(255,255,255)):
+    def __init__(self, size=1, type='constant', constant_color=(255, 255, 255)):
         self.size = size
         self.type = type
-        self.constant_color=list(constant_color)
+        self.constant_color = list(constant_color)
 
     def __call__(self, image, *args):
-        size=self.size
-        if self.type=='constant':
+        size = self.size
+        if self.type == 'constant':
             image = cv2.copyMakeBorder(image, size, size, size, size, cv2.BORDER_CONSTANT, value=self.constant_color)
-        elif self.type=='reflect':
+        elif self.type == 'reflect':
             image = cv2.copyMakeBorder(image, size, size, size, size, cv2.BORDER_REFLECT)
-        elif self.type=='replicate':
+        elif self.type == 'replicate':
             image = cv2.copyMakeBorder(image, size, size, size, size, cv2.BORDER_REPLICATE)
 
         if len(args):
@@ -419,45 +433,50 @@ class Padding(object):
         else:
             return image
 
-class RandomCrop(object):
-    def __init__(self,padding):
-        self.padding=padding
 
-    def __call__(self,image,*args):
-        xi=random.randint(0,self.padding*2)
-        yi=random.randint(0,self.padding*2)
-        image=image[xi:-(2*self.padding-xi),yi:-(self.padding*2-yi),:]
+class RandomCrop(object):
+    def __init__(self, padding):
+        self.padding = padding
+
+    def __call__(self, image, *args):
+        xi = random.randint(0, self.padding * 2)
+        yi = random.randint(0, self.padding * 2)
+        image = image[xi:-(2 * self.padding - xi), yi:-(self.padding * 2 - yi), :]
         if len(args):
             return (image, *args)
         else:
             return image
+
 
 class Scale(object):
-    def __init__(self,dim):
-        self.dim=dim
-    def __call__(self,image,*args):
-        image=cv2.resize(image,self.dim)
+    def __init__(self, dim):
+        self.dim = dim
+
+    def __call__(self, image, *args):
+        image = cv2.resize(image, self.dim)
         if len(args):
             return (image, *args)
         else:
             return image
 
+
 class Flip(object):
-    def __init__(self,dim=1,percentage=0.5):
+    def __init__(self, dim=1, percentage=0.5):
         """1 for horizontal flip
         0 for vertical flip
         -1 for both flip"""
-        self.dim=dim
-        self.percentage=percentage
+        self.dim = dim
+        self.percentage = percentage
 
     def __call__(self, image, *args):
-        if np.random.rand()<self.percentage:
-            cv2.flip(image,self.dim,image)
-        #inplace flip
+        if np.random.rand() < self.percentage:
+            cv2.flip(image, self.dim, image)
+        # inplace flip
         if len(args):
             return (image, *args)
         else:
             return image
+
 
 class SSD_Expand(object):
     def __init__(self, mean):
@@ -469,15 +488,15 @@ class SSD_Expand(object):
 
         height, width, depth = image.shape
         ratio = random.uniform(1, 4)
-        left = random.uniform(0, width*ratio - width)
-        top = random.uniform(0, height*ratio - height)
+        left = random.uniform(0, width * ratio - width)
+        top = random.uniform(0, height * ratio - height)
 
         expand_image = np.zeros(
-            (int(height*ratio), int(width*ratio), depth),
+            (int(height * ratio), int(width * ratio), depth),
             dtype=image.dtype)
         expand_image[:, :, :] = self.mean
         expand_image[int(top):int(top + height),
-                     int(left):int(left + width)] = image
+        int(left):int(left + width)] = image
         image = expand_image
 
         boxes = boxes.copy()
@@ -560,14 +579,15 @@ class SSDAugmentation(object):
     def __call__(self, img, boxes, labels):
         return self.augment(img, boxes, labels)
 
-def get_advanced_transform(dim,padding=5,random_crop=5,hue=True,
-                           saturation=True,value=True,horizontal_flip=True,
-                           random_noise=0,mean=(127.5,127.5,127.5),std=(127.5,127.5,127.5),
+
+def get_advanced_transform(dim, padding=5, random_crop=5, hue=True,
+                           saturation=True, value=True, horizontal_flip=True,
+                           random_noise=0, mean=(127.5, 127.5, 127.5), std=(127.5, 127.5, 127.5),
                            other_functions=()):
     # loader must be cv2 loader
     # other functions will be added after the HSV transform
-    trans=[]
-    if dim!=None:
+    trans = []
+    if dim != None:
         trans.append(Scale(dim))
     if padding:
         trans.append(Padding(int(padding)))
@@ -591,19 +611,21 @@ def get_advanced_transform(dim,padding=5,random_crop=5,hue=True,
         trans.append(RandomNoise(random_noise))
     trans.append(ToTensor())
     # normalize method: (x_channel-mean)/std
-    trans.append(transforms.Normalize(mean,std))
+    trans.append(transforms.Normalize(mean, std))
     return transforms.Compose(trans)
 
-def get_advanced_transform_test(dim,mean=(127.5,127.5,127.5),std=(127.5,127.5,127.5)):
+
+def get_advanced_transform_test(dim, mean=(127.5, 127.5, 127.5), std=(127.5, 127.5, 127.5)):
     # loader must be cv2 loader
     return transforms.Compose([
         Scale(dim),
         ToTensor(),
-        transforms.Normalize(mean,std),
+        transforms.Normalize(mean, std),
     ])
 
+
 def cv2_loader(path):
-    image=cv2.imread(path)
+    image = cv2.imread(path)
     if image is None:
         pass
     return image
